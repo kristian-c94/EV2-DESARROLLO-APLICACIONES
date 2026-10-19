@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.duoc.madera.models.Registro
 import com.duoc.madera.repository.UserRepository
+import android.graphics.Bitmap
+
 
 class RegistroViewModel : ViewModel() {
     var nombre by mutableStateOf("")
@@ -42,6 +44,9 @@ class RegistroViewModel : ViewModel() {
     var generalError by mutableStateOf<String?>(null)
         private set
 
+    var foto by mutableStateOf<Bitmap?>(null)
+        private set
+
     fun onNombreChanged(value: String) {
         nombre = value
         if (nombreError != null) nombreError = null
@@ -72,6 +77,12 @@ class RegistroViewModel : ViewModel() {
         if (generalError != null) generalError = null
     }
 
+    fun onFotoCapturada(imagen: Bitmap?) {
+        if (imagen != null) foto = imagen
+    }
+    fun eliminarFoto() {
+        foto = null
+    }
     fun registrar(onSuccess: (Registro) -> Unit): Boolean {
         var isValid = true
 
@@ -147,7 +158,9 @@ class RegistroViewModel : ViewModel() {
             apellido = trimmedApellido,
             correo = trimmedCorreo,
             contrasenia = trimmedPass,
-            user = trimmedUser
+            user = trimmedUser,
+            foto = foto
+
         )
 
         val agregado = UserRepository.agregarUsuario(nuevoRegistro)

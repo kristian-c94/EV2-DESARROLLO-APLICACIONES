@@ -32,6 +32,14 @@ import com.duoc.madera.models.Registro
 import com.duoc.madera.ui.components.AnimatedWoodButton
 import com.duoc.madera.ui.components.AnimatedWoodTextButton
 import com.duoc.madera.viewmodels.RegistroViewModel
+import android.graphics.Bitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 
 @Composable
 fun RegistroView(
@@ -40,7 +48,11 @@ fun RegistroView(
     viewModel: RegistroViewModel = viewModel()
 ) {
     val focusManager = LocalFocusManager.current
-
+    val lanzarCamara = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { imagen: Bitmap? ->
+        viewModel.onFotoCapturada(imagen)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,6 +69,51 @@ fun RegistroView(
         )
 
         Spacer(modifier = Modifier.height(20.dp))
+        val foto = viewModel.foto
+
+        if (foto == null) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Sin foto",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(120.dp)
+            )
+            Text(
+                text = "Aún no has tomado una foto",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            Image(
+                bitmap = foto.asImageBitmap(),
+                contentDescription = "Foto de perfil",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+            )
+            Text(
+                text = "${foto.width} × ${foto.height} px",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { lanzarCamara.launch(null) },
+                enabled = foto == null
+            ) {
+                Text("Tomar foto")
+            }
+            if (foto != null) {
+                OutlinedButton(onClick = { viewModel.eliminarFoto() }) {
+                    Text("Eliminar foto")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         AnimatedVisibility(
             visible = viewModel.generalError != null,
