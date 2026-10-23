@@ -1,12 +1,20 @@
 package com.duoc.madera.views
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -20,26 +28,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.duoc.madera.models.Registro
 import com.duoc.madera.ui.components.AnimatedWoodButton
 import com.duoc.madera.ui.components.AnimatedWoodTextButton
 import com.duoc.madera.viewmodels.RegistroViewModel
-import android.graphics.Bitmap
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 
 @Composable
 fun RegistroView(
@@ -47,12 +52,41 @@ fun RegistroView(
     onNavigateToLogin: () -> Unit,
     viewModel: RegistroViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+
     val lanzarCamara = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { imagen: Bitmap? ->
         viewModel.onFotoCapturada(imagen)
     }
+
+    val solicitarPermisoCamara = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            lanzarCamara.launch(null)
+        } else {
+            Toast.makeText(
+                context,
+                "Se requiere permiso de cámara para tomar la foto de perfil",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    fun abrirCamaraConPermiso() {
+        val permissionState = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        )
+        if (permissionState == PackageManager.PERMISSION_GRANTED) {
+            lanzarCamara.launch(null)
+        } else {
+            solicitarPermisoCamara.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,7 +135,7 @@ fun RegistroView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = { lanzarCamara.launch(null) },
+                onClick = { abrirCamaraConPermiso() },
                 enabled = foto == null
             ) {
                 Text("Tomar foto")

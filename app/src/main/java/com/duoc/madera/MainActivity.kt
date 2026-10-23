@@ -14,10 +14,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.duoc.madera.repository.UserRepository
 import com.duoc.madera.ui.theme.EnciclopediaMaderasTheme
 import com.duoc.madera.views.LoginView
 import com.duoc.madera.views.MainView
 import com.duoc.madera.views.RegistroView
+import kotlinx.coroutines.launch
 
 // Definición de las pantallas de la aplicación
 sealed class Pantalla {
@@ -29,6 +32,8 @@ sealed class Pantalla {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UserRepository.init(applicationContext)
+
         setContent {
             EnciclopediaMaderasTheme {
                 Surface(
@@ -36,6 +41,11 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var pantallaActual by remember { mutableStateOf<Pantalla>(Pantalla.Login()) }
+
+                    // Cargar usuarios de DataStore al iniciar
+                    LaunchedEffect(Unit) {
+                        UserRepository.cargarUsuarios()
+                    }
 
                     AnimatedContent(
                         targetState = pantallaActual,
@@ -66,7 +76,7 @@ class MainActivity : ComponentActivity() {
                             }
                             is Pantalla.Registro -> {
                                 RegistroView(
-                                    onRegistroSuccess = { registroData ->
+                                    onRegistroSuccess = { _ ->
                                         pantallaActual = Pantalla.Login(
                                             mensajeExito = "¡Usuario registrado con éxito! Ya puedes iniciar sesión."
                                         )
@@ -80,7 +90,10 @@ class MainActivity : ComponentActivity() {
                                 MainView(
                                     usuarioConectado = targetPantalla.usuario,
                                     onCerrarSesion = {
-                                        pantallaActual = Pantalla.Login()
+                                        lifecycleScope.launch {
+                                            UserRepository.cerrarSesion()
+                                            pantallaActual = Pantalla.Login()
+                                        }
                                     }
                                 )
                             }

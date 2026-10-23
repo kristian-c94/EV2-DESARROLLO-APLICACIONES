@@ -1,14 +1,15 @@
 package com.duoc.madera.viewmodels
 
+import android.graphics.Bitmap
 import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.duoc.madera.models.Registro
 import com.duoc.madera.repository.UserRepository
-import android.graphics.Bitmap
-
+import kotlinx.coroutines.launch
 
 class RegistroViewModel : ViewModel() {
     var nombre by mutableStateOf("")
@@ -80,10 +81,12 @@ class RegistroViewModel : ViewModel() {
     fun onFotoCapturada(imagen: Bitmap?) {
         if (imagen != null) foto = imagen
     }
+
     fun eliminarFoto() {
         foto = null
     }
-    fun registrar(onSuccess: (Registro) -> Unit): Boolean {
+
+    fun registrar(onSuccess: (Registro) -> Unit) {
         var isValid = true
 
         val trimmedNombre = nombre.trim()
@@ -150,7 +153,7 @@ class RegistroViewModel : ViewModel() {
 
         if (!isValid) {
             generalError = "Por favor corrige los campos con errores"
-            return false
+            return
         }
 
         val nuevoRegistro = Registro(
@@ -160,18 +163,17 @@ class RegistroViewModel : ViewModel() {
             contrasenia = trimmedPass,
             user = trimmedUser,
             foto = foto
-
         )
 
-        val agregado = UserRepository.agregarUsuario(nuevoRegistro)
-        if (!agregado) {
-            userError = "El usuario ya existe"
-            generalError = "No se pudo completar el registro"
-            return false
+        viewModelScope.launch {
+            val agregado = UserRepository.agregarUsuario(nuevoRegistro)
+            if (!agregado) {
+                userError = "El usuario ya existe"
+                generalError = "No se pudo completar el registro"
+            } else {
+                generalError = null
+                onSuccess(nuevoRegistro)
+            }
         }
-
-        generalError = null
-        onSuccess(nuevoRegistro)
-        return true
     }
 }

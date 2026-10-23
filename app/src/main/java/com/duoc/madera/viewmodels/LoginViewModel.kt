@@ -4,8 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.duoc.madera.models.Login
 import com.duoc.madera.repository.UserRepository
+import kotlinx.coroutines.launch
 
 class LoginViewModel : ViewModel() {
     var user by mutableStateOf("")
@@ -44,7 +46,7 @@ class LoginViewModel : ViewModel() {
         successMessage = mensaje
     }
 
-    fun login(onSuccess: (Login) -> Unit): Boolean {
+    fun login(onSuccess: (Login) -> Unit) {
         var isValid = true
         val trimmedUser = user.trim()
         val trimmedPass = password.trim()
@@ -71,12 +73,12 @@ class LoginViewModel : ViewModel() {
 
         if (!isValid) {
             generalError = "Por favor corrige los campos indicados"
-            return false
+            return
         }
 
         if (UserRepository.estaVacio()) {
             generalError = "No hay usuarios registrados. Por favor regístrate primero."
-            return false
+            return
         }
 
         val usuarioEncontrado = UserRepository.buscarUsuario(trimmedUser)
@@ -84,15 +86,15 @@ class LoginViewModel : ViewModel() {
         if (usuarioEncontrado == null) {
             userError = "El usuario no existe"
             generalError = "El usuario no está registrado. Regístrate para ingresar."
-            return false
         } else if (usuarioEncontrado.contrasenia != trimmedPass) {
             passwordError = "Contraseña incorrecta"
             generalError = "La contraseña ingresada es incorrecta"
-            return false
         } else {
             generalError = null
-            onSuccess(Login(user = usuarioEncontrado.user, password = trimmedPass))
-            return true
+            viewModelScope.launch {
+                UserRepository.guardarSesion(usuarioEncontrado.user)
+                onSuccess(Login(user = usuarioEncontrado.user, password = trimmedPass))
+            }
         }
     }
 }
